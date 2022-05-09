@@ -1,10 +1,10 @@
 from requests import get
-import asyncio
-import json
+from json import dump
 from math import ceil
 
 
 def get_count_items(url: str) -> int:
+    """Получение ответа от сервиса"""
     response = get(url)
     if response.status_code == 200:
         print(f'Found {response.json()["count"]} items')
@@ -16,6 +16,7 @@ def get_count_items(url: str) -> int:
 
 
 def get_items(url:str, number_of_pages:int):
+    """Парсинг содержимого, и разбиение на блоки с товарами"""
     items = dict()
     count_duplicate = 0
     for number_of_pages in range(1, number_of_pages + 1):
@@ -45,7 +46,7 @@ def main():
     items = get_items(url, number_of_pages)
 
     with open('content_from_Bazaraki.json', 'w') as f_json:
-        json.dump(items, f_json, indent=4)
+        dump(items, f_json, indent=4)
 
 
 if __name__ == '__main__':
