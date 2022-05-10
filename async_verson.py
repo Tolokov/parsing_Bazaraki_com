@@ -11,7 +11,7 @@ from itertools import cycle
 async def check_status_code(response):
     if response.status == 404:
         print(f'does not exist')
-        return response
+        return None
     elif response.status != 200:
         print(f'STATUS CODE: {response.status}')
         raise StopIteration(f'The site is not available or the address has changed')
@@ -36,12 +36,13 @@ async def get_api_content(session, url, num, proxies) -> dict:
     async with session.get(url, proxy=p) as response:
         response = await check_status_code(response)
         items = dict()
-        api_answer = await response.json()
-        data_json = api_answer["results"]
-        for content in data_json:
-            items.update({content['id']: content})
+        if response is not None:
+            api_answer = await response.json()
+            data_json = api_answer["results"]
+            for content in data_json:
+                items.update({content['id']: content})
 
-        print(f'Loading content of page #: {num}... items: {len(items)}')
+            print(f'Loading content of page #: {num}... items: {len(items)}')
     return items
 
 
@@ -68,7 +69,6 @@ async def get_content_and_dump_to_dict(rubric, step, proxies):
                 for num_page in range(previous_page, next_page):
 
                     task = get_api_content(session, url, num_page, proxies)
-
                     tasks.append(task)
 
                 for item in await gather(*tasks):
@@ -107,6 +107,6 @@ if __name__ == '__main__':
 
     if platform == 'win32':
         set_event_loop_policy(WindowsSelectorEventLoopPolicy())
-    run(main(step=1, proxies=proxies_cycle))
+    run(main(2, proxies_cycle))
 
 
