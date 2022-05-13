@@ -59,8 +59,6 @@ async def get_content_and_convert_to_dict(rubric, step, proxies):
         async with session.get(url, proxy=next(proxies)) as response:
             pages = await get_total_pages(await check_status_code(response))
 
-        async with session.get(url, proxy=next(proxies)):
-
             previous_page = 1
 
             for next_page in range(1, pages + step, step):
