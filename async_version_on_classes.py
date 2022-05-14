@@ -13,15 +13,11 @@ class SaveJson:
 
     def __init__(self, name: str, dict_to_dump: dict):
         self._name = name if '.json' in name else f'{name}.json'
-        self._dict_to_dump = dict_to_dump if bool(dict_to_dump) else self.fill_with_temporary_content()
+        self._dict_to_dump = dict_to_dump
 
         with open(self._name, 'w') as f:
             dump(self._dict_to_dump, f, escape_forward_slashes=False, indent=4)
-
-    @staticmethod
-    def fill_with_temporary_content():
-        from string import ascii_lowercase
-        return {k: v for v, k in enumerate(ascii_lowercase)}
+            print(self._name, ' is save!')
 
     def __str__(self):
         return self._name
@@ -50,28 +46,18 @@ class TimerDecorator:
 
 
 class Parser:
-    """Создание сессии"""
 
-    def __init__(self, rubric, step, proxies):
+    def __init__(self, rubric: int, step: int, proxies):
         self.rubric = rubric
         self.step = step
         self.proxies = proxies
         self.response = None
-
-    async def get_api_content(self, session, url, num_page, proxies):
-        url = f'{url}&page={num_page}'
-        items = dict()
-        async with session.get(url, proxy=proxies()) as self.response:
-            await self.check_status_code()
-            if self.response is not None:
-                api_answer = await self.response.json()
-                data_json = api_answer["results"]
-                for content in data_json:
-                    items.update({content['id']: content})
-                print(f'Loading content of page: #{num_page}... items: {len(items)}')
-
-        print(items.keys())
-        return items
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/39.0.2171.95 Safari/537.36'
+        }
+        self.pages = None
+        self.items = None
 
     async def check_status_code(self):
         if self.response.status == 404:
@@ -84,41 +70,52 @@ class Parser:
     async def get_total_pages(self):
         """To know the number of products and the number of pages that will be used in the parsing"""
         api_answer = await self.response.json()
-        items = api_answer['count']
-        pages = ceil(api_answer['count'] / 10)
-        print(f'Товаров в категории {items} страниц для обработки {pages}')
-        return pages
+        self.items = int(api_answer['count'])
+        self.pages = ceil(api_answer['count'] / 10)
+        if self.pages >= 3000:
+            self.pages = 3000
+            print('The maximum number of requests to the api has been exceeded, the limit is set to 3 thousand')
+        print(f'Items in category: {self.items} pages to process: {self.pages}')
+
+    async def get_api_content(self, session, url, num_page, proxies):
+        url = f'{url}&page={num_page}'
+        items = dict()
+        async with session.get(url, proxy=proxies) as self.response:
+            await self.check_status_code()
+            if self.response is not None:
+                api_answer = await self.response.json()
+                data_json = api_answer["results"]
+                for content in data_json:
+                    items.update({content['id']: content})
+                # print(f'Loading content of page: #{num_page}... items: {len(items)}')
+        return items
 
     async def get_content_and_convert_to_dict(self):
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'
-        }
 
         items = dict()
 
-        async with ClientSession(headers=headers) as session:
+        async with ClientSession(headers=self.headers) as session:
             url = f'https://www.bazaraki.com/api/items/?rubric={self.rubric}'
 
             async with session.get(url, proxy=self.proxies()) as self.response:
                 await self.check_status_code()
-                pages = await self.get_total_pages()
+                await self.get_total_pages()
 
                 previous_page = 1
 
-                for next_page in range(1, pages + self.step, self.step):
+                for next_page in range(1, self.pages + self.step, self.step):
                     tasks = list()
+                    for num_page in range(previous_page, next_page + 1):
 
-                    for num_page in range(previous_page, next_page):
-                        task = self.get_api_content(session, url, num_page, self.proxies)
+                        task = self.get_api_content(session, url, num_page, self.proxies())
                         tasks.append(task)
 
                     for item in await gather(*tasks):
                         items.update(item)
 
                     previous_page = next_page
-                    print('---------------')
-
-        print('Уникальных товаров:', len(items))
+                    print(f'... page #{num_page}')
+        print('Unique items:', len(items))
         return items
 
 
@@ -126,27 +123,44 @@ async def main(step=10):
     """"""
     login = ''
     password = ''
-    proxies = [
+    # https://proxy6.net/en/?r=406356
+
+    proxies = ProxiesList([
         f'http://{login}:{password}@217.29.53.84:10171',
         f'http://{login}:{password}@217.29.53.84:10170',
         f'http://{login}:{password}@217.29.53.84:10169',
         f'http://{login}:{password}@217.29.53.84:10168',
         f'http://{login}:{password}@217.29.53.84:10167',
-        f'http://{login}:{password}@217.29.53.84:10166',
-        f'http://{login}:{password}@217.29.53.84:10165',
-        f'http://{login}:{password}@217.29.53.84:10164',
-        f'http://{login}:{password}@217.29.53.84:10163',
-        f'http://{login}:{password}@217.29.53.107:11091',
-    ]
+    ])
 
-    proxies = ProxiesList(proxies)
+    all_rubrics = {
+        "Cars": "5",
+        "Motorbikes": "2352",
+        "Auto parts": "6", # more 3000 pages
+        "Auto accessories": "2795",
+        "Motorbike parts, accessories": "17",
+        "Tractors, parts": "2952",
+        "Trucks, truck parts": "557",
+        "Boats, sailing, marine equipment": "4",
+        "Buses": "2713",
+        "Vans": "2381",
+        "Tools, equipment": "3120",
+        "Lifts, cranes": "3134",
+        "Trailers": "2335",
+        "Caravans": "3239",
+        "Quads, ATV, buggy": "290",
+        "Go-karts": "2718",
+        "Aircraft": "3285"
+    }
 
-    rubric = 5
+    for title_rubric, rubric in all_rubrics.items():
+        print(f'Rubric {title_rubric} #{rubric} is parsing...')
 
-    p = Parser(rubric, step, proxies)
-    items = await p.get_content_and_convert_to_dict()
+        p = Parser(rubric, step, proxies)
+        items = await p.get_content_and_convert_to_dict()
 
-    SaveJson(f'Bazaraki-Dump-rubrick-{rubric}', items)
+        print()
+        SaveJson(f'jsons\\Bazaraki-{title_rubric}-{rubric}', items)
 
 
 if __name__ == "__main__":
@@ -154,4 +168,4 @@ if __name__ == "__main__":
     if platform == 'win32':
         set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
-    TimerDecorator(run(main(step=3)))
+    TimerDecorator(run(main(step=4)))
