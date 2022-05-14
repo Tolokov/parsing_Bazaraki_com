@@ -119,39 +119,29 @@ class Parser:
         return items
 
 
-async def main(step=10):
-    """"""
-    login = ''
-    password = ''
-    # https://proxy6.net/en/?r=406356
-
-    proxies = ProxiesList([
-        f'http://{login}:{password}@217.29.53.84:10171',
-        f'http://{login}:{password}@217.29.53.84:10170',
-        f'http://{login}:{password}@217.29.53.84:10169',
-        f'http://{login}:{password}@217.29.53.84:10168',
-        f'http://{login}:{password}@217.29.53.84:10167',
-    ])
+async def main(step, proxies):
+    """Starting the data collection process from bazaraki com"""
 
     all_rubrics = {
-        "Cars": "5",
-        "Motorbikes": "2352",
-        "Auto parts": "6", # more 3000 pages
-        "Auto accessories": "2795",
-        "Motorbike parts, accessories": "17",
-        "Tractors, parts": "2952",
-        "Trucks, truck parts": "557",
-        "Boats, sailing, marine equipment": "4",
-        "Buses": "2713",
-        "Vans": "2381",
-        "Tools, equipment": "3120",
-        "Lifts, cranes": "3134",
-        "Trailers": "2335",
-        "Caravans": "3239",
-        "Quads, ATV, buggy": "290",
-        "Go-karts": "2718",
+        # "Cars": "5",
+        # "Motorbikes": "2352",
+        # "Auto parts": "6", # more 3000 pages
+        # "Auto accessories": "2795",
+        # "Motorbike parts, accessories": "17",
+        # "Tractors, parts": "2952",
+        # "Trucks, truck parts": "557",
+        # "Boats, sailing, marine equipment": "4",
+        # "Buses": "2713",
+        # "Vans": "2381",
+        # "Tools, equipment": "3120",
+        # "Lifts, cranes": "3134",
+        # "Trailers": "2335",
+        # "Caravans": "3239",
+        # "Quads, ATV, buggy": "290",
+        # "Go-karts": "2718",
         "Aircraft": "3285"
     }
+
 
     for title_rubric, rubric in all_rubrics.items():
         print(f'Rubric {title_rubric} #{rubric} is parsing...')
@@ -164,8 +154,23 @@ async def main(step=10):
 
 
 if __name__ == "__main__":
+    # Чем больше прокси приобретено, тем быстрее будут собираться данные с сайта
+    # https://proxy6.net/en/?r=406356
+    # приобретаем самый дешевый за 3.60
+    # указываем полученные логин и пароль, а так-же выданные ip-адреса уникально для каждой строки
+
+    login = ''
+    password = ''
+
+    proxies = ProxiesList([
+        f'http://{login}:{password}@217.29.53.84:10171',
+        f'http://{login}:{password}@217.29.53.84:10170',
+        f'http://{login}:{password}@217.29.53.84:10169',
+        f'http://{login}:{password}@217.29.53.84:10168',
+        f'http://{login}:{password}@217.29.53.84:10167',
+    ])
 
     if platform == 'win32':
         set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
-    TimerDecorator(run(main(step=4)))
+    TimerDecorator(run(main(step=4, proxies=proxies)))
