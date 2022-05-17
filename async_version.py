@@ -40,9 +40,11 @@ class TimerDecorator:
         func = self._function(*args, **kwargs)
         return func
 
-    def __del__(self, ):
+    def __del__(self):
         self.finish = datetime.now()
-        print('Program is finish: ', self.finish - self.start)
+        self.stop = self.finish - self.start
+        self.result_print = ('Program is finish: {}').format(self.stop)
+        print(self.result_print)
 
 
 class Parser:
