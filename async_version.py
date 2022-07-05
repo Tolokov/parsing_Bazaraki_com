@@ -163,13 +163,14 @@ if __name__ == "__main__":
 
     login = ''
     password = ''
+    proxy_id = ''
 
     proxies = ProxiesList([
-        f'http://{login}:{password}@217.29.53.84:10171',
-        f'http://{login}:{password}@217.29.53.84:10170',
-        f'http://{login}:{password}@217.29.53.84:10169',
-        f'http://{login}:{password}@217.29.53.84:10168',
-        f'http://{login}:{password}@217.29.53.84:10167',
+        f'http://{login}:{password}@{proxy_id}',
+        f'http://{login}:{password}@{proxy_id}',
+        f'http://{login}:{password}@{proxy_id}',
+        f'http://{login}:{password}@{proxy_id}',
+        f'http://{login}:{password}@{proxy_id}',
     ])
 
     if platform == 'win32':
